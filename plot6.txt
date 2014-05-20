@@ -1,0 +1,31 @@
+library(ggplot2)
+
+#Loading Data
+NEI <- readRDS("summarySCC_PM25.rds")
+SCC <- readRDS("Source_Classification_Code.rds")
+
+#Subsetting
+#Looking at the data source document found here: http://www.epa.gov/ttn/chief/net/2008neiv3/2008_neiv3_tsd_draft.pdf
+#The type="on-road" gives us the subset
+NEI.BaltAndLAOnRoad <- NEI[(NEI$fips %in% c("24510","06037")) & (NEI$type=="ON-ROAD"), ]
+NEI.BaltAndLAOnRoad$fips <- factor(NEI.BaltAndLAOnRoad$fips, levels=c("24510", "06037"), labels=c("Baltimore City", "Los Angeles County"))
+NEI.BaltAndLAOnRoad$year <- factor(NEI.BaltAndLAOnRoad$year)
+
+#Calculating sum
+totPM25perYear <- aggregate(NEI.BaltAndLAOnRoad$Emissions, list(Year=NEI.BaltAndLAOnRoad$year, 
+                                                                Location=as.factor(NEI.BaltAndLAOnRoad$fips)
+                                                                ), sum)
+#Calculating variations between rows
+totPM25perYear <- ddply(totPM25perYear,"Location",transform, Growth=c(NA,(exp(diff(log(x)))-1)*100))
+
+#There is no variation in 1999 as 1999 is the first year of observation
+#=> Eliminating NA in 1999
+totPM25perYear <- totPM25perYear[!is.na(totPM25perYear$Growth), ]
+
+#Plotting
+p <- ggplot(totPM25perYear, aes(Year, Growth, fill = Location)) + 
+        geom_bar(position = "dodge", stat="identity") + 
+        labs(y="Variation (in %)") + 
+        ggtitle(expression(atop("Annual variation of emission of PM2.5", 
+                                atop(italic("from motor vehicle sources"), ""))))
+ggsave("plot6.png", p, dpi=72)

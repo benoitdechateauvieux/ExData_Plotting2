@@ -1,0 +1,22 @@
+library(ggplot2)
+
+#Loading Data
+NEI <- readRDS("summarySCC_PM25.rds")
+SCC <- readRDS("Source_Classification_Code.rds")
+
+#Subsetting
+#Looking at the data source document found here: http://www.epa.gov/ttn/chief/net/2008neiv3/2008_neiv3_tsd_draft.pdf
+#The type="on-road" gives us the subset
+NEI.BaltimoreOnRoad <- NEI[(NEI$fips=="24510") & (NEI$type=="ON-ROAD"), ]
+
+#Calculating sum
+totPM25perYear <- aggregate(NEI.BaltimoreOnRoad$Emissions, list(Year=NEI.BaltimoreOnRoad$year), sum)
+totPM25perYear$x <- totPM25perYear$x/1000
+
+#Plotting
+p <- ggplot(totPM25perYear) + 
+        geom_line(aes(y = x, x = Year)) + 
+        labs(y="Amount of PM2.5 emitted, in kilotons") + 
+        ggtitle(expression(atop("Total PM2.5 emission from motor vehicle sources", 
+                                atop(italic("Baltimore City, Maryland"), ""))))
+ggsave("plot5.png", p, dpi=72)
